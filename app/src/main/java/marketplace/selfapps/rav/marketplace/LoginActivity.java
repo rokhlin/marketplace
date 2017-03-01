@@ -338,10 +338,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
 
 
     private void startActivityIfAuthenticated(JWToken token) {
-        if(token == null) return;
-        Intent i = new Intent(LoginActivity.this, FeedActivity.class);
-        i.putExtra(TOKEN, token);
-        startActivity(i);
+        if(token != null){
+            Intent i = new Intent(LoginActivity.this, FeedActivity.class);
+            i.putExtra(TOKEN, token);
+            startActivity(i);
+        }
+
     }
 
 
@@ -358,7 +360,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         String token = sPref.getString(TOKEN, null);
         if(token!= null)
             log(LoginActivity.this," token loaded from preferences!" );
-        return new JWToken(token);
+        return token!= null ? new JWToken(token): null;
     }
 }
 

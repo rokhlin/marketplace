@@ -3,6 +3,9 @@ package marketplace.selfapps.rav.marketplace.tasks;
 import android.os.AsyncTask;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import java.io.IOException;
 
 import marketplace.selfapps.rav.marketplace.LoginActivity;
 import marketplace.selfapps.rav.marketplace.authentification.AuthInterface;
@@ -17,39 +20,43 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 
 public abstract class UserLoginTask extends AsyncTask<Void, Void, JWToken> {
-    private static final String BASE_URL ="ENTER_HERE_BASE_URL_ADDRESS";//TODO: !!!!!!!!!!!!!!!!!!!!!!!!ENTER_HERE_BASE_URL_ADDRESS
+    private static final String BASE_URL ="http://192.168.1.22:8082/";//TODO: !!!!!!!!!!!!!!!!!!!!!!!!ENTER_HERE_BASE_URL_ADDRESS
     private final AuthInterface service;
     private User user;
     private JWToken token;
-    private Gson gson = new Gson();
+    Gson gson = new GsonBuilder()
+            .setLenient()
+            .create();
 
 
     public UserLoginTask(String email, String password, String role) {
         user = new User(email, password, role);
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
         service = retrofit.create(AuthInterface.class);
     }
 
     @Override
     protected JWToken doInBackground(Void... params) {
-        service.getSignIn(gson.toJson(user)).enqueue(new Callback<JWToken>() {
-            @Override
-            public void onResponse(Call<JWToken> call, Response<JWToken> response) {
-                token = response.body();//Parsing value to JWToken.class
+        log(getClass(), "doInBackground------------------------");
+        final String[] token = new String[1];
+        try {
+            Response<String> response = service.getSignIn(user).execute();
+            log(getClass(), "response="+response.toString());
+            token[0] = response.headers().get("token");
+            //   token[0] = response.body();//Parsing value to JWToken.class
+            log(getClass(),"token = "+ token[0]);
+            log(getClass(),"response.headers() = "+ response.headers());
+            log(getClass(),"response.message() = "+ response.message());
 
-                log(getClass(),"token = "+ token.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+            log(getClass(),"Call<JWToken> error: "+ e.getMessage());
+        }
 
-            }
-
-            @Override
-            public void onFailure(Call<JWToken> call, Throwable t) {
-                log(getClass(),"Call<JWToken> error: "+ t.getMessage());
-            }
-        });
-        return token;
+        return new JWToken(token[0]);
     }
 
     @Override

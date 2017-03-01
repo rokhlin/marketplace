@@ -18,13 +18,14 @@ public class User implements Parcelable {
 
     public User(String email, String password, String role) {
         this.email = email;
-
+        this.userName = email;
         this.password = password;
         this.role = role;
     }
 
     public User(String email,String password) {
         this.email = email;
+        this.userName = email;
         this.password = password;
 
     }

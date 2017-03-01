@@ -13,4 +13,13 @@
     tools:context="marketplace.selfapps.rav.marketplace.FeedActivity"
     tools:showIn="@layout/app_bar_feed">
 
+    <TextView
+        android:text="TextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="135dp"
+        android:layout_marginTop="173dp"
+        android:id="@+id/textView2" />
 </RelativeLayout>
