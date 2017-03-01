@@ -3,11 +3,13 @@ package marketplace.selfapps.rav.marketplace;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.LoaderManager;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.app.LoaderManager.LoaderCallbacks;
 
 import android.content.CursorLoader;
 import android.content.Loader;
@@ -29,28 +31,38 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import marketplace.selfapps.rav.marketplace.authentification.AuthInterface;
+import marketplace.selfapps.rav.marketplace.authentification.model.JWToken;
+import marketplace.selfapps.rav.marketplace.authentification.model.User;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 import static android.Manifest.permission.READ_CONTACTS;
+import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor> {
+public class LoginActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+    private static final String BASE_URL ="ENTER_HERE_BASE_URL_ADDRESS";//TODO: !!!!!!!!!!!!!!!!!!!!!!!!ENTER_HERE_BASE_URL_ADDRESS
+    private static final String ROLE ="user";
+    private static final String TOKEN = "TOKEN" ;
+    private AuthInterface service;
 
     /**
      * Id to identity READ_CONTACTS permission request.
      */
     private static final int REQUEST_READ_CONTACTS = 0;
 
-    /**
-     * A dummy authentication store containing known user names and passwords.
-     * TODO: remove after connecting to a real authentication system.
-     */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
+
     /**
      * Keep track of the login task to ensure we can cancel it if requested.
      */
@@ -61,11 +73,25 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
+    private Gson gson;
+    private SharedPreferences sPref;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        //Check authorized user;
+        startActivityIfAuthenticated(loadToken());
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        service = retrofit.create(AuthInterface.class);
+
+
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
@@ -144,6 +170,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      * errors are presented and no actual login attempt is made.
      */
     private void attemptLogin() {
+
         if (mAuthTask != null) {
             return;
         }
@@ -185,8 +212,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
-            mAuthTask.execute((Void) null);
+            mAuthTask = new UserLoginTask(email, password,ROLE);
+            mAuthTask.execute();
         }
     }
 
@@ -253,6 +280,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
     }
 
+
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
         List<String> emails = new ArrayList<>();
@@ -294,46 +322,44 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
+    public class UserLoginTask extends AsyncTask<Void, Void, JWToken> {
+        private User user;
+        private JWToken token;
 
-        private final String mEmail;
-        private final String mPassword;
 
-        UserLoginTask(String email, String password) {
-            mEmail = email;
-            mPassword = password;
+        UserLoginTask(String email, String password, String role) {
+            user = new User(email, password, role);
         }
 
         @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
+        protected JWToken doInBackground(Void... params) {
+            service.getSignIn(gson.toJson(user)).enqueue(new Callback<JWToken>() {
+                @Override
+                public void onResponse(Call<JWToken> call, Response<JWToken> response) {
+                    token = response.body();//Parsing value to JWToken.class
 
-            try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
+                    log(LoginActivity.this,"token = "+ token.toString());
+
             }
 
-            for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
+                @Override
+                public void onFailure(Call<JWToken> call, Throwable t) {
+                    log(LoginActivity.this,"Call<JWToken> error: "+ t.getMessage());
                 }
-            }
-
-            // TODO: register the new account here.
-            return true;
+            });
+            return token;
         }
 
         @Override
-        protected void onPostExecute(final Boolean success) {
+        protected void onPostExecute(final JWToken token) {
             mAuthTask = null;
             showProgress(false);
 
-            if (success) {
-                finish();
+            if (token != null) {
+                log(LoginActivity.this,"onPostExecute token: "+ token.toString());
+                saveToken(token);
+                startActivityIfAuthenticated(token);
+
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
                 mPasswordView.requestFocus();
@@ -345,6 +371,30 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             mAuthTask = null;
             showProgress(false);
         }
+    }
+
+    private void startActivityIfAuthenticated(JWToken token) {
+        if(token == null) return;
+        Intent i = new Intent(LoginActivity.this, FeedActivity.class);
+        i.putExtra(TOKEN, token);
+        startActivity(i);
+    }
+
+
+    public void saveToken(JWToken token) {
+        sPref = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor ed = sPref.edit();
+        ed.putString(TOKEN, token.toString());
+        ed.apply();
+        log(LoginActivity.this," token saved!");
+    }
+
+    public JWToken loadToken() {
+        sPref = getPreferences(MODE_PRIVATE);
+        String token = sPref.getString(TOKEN, null);
+        if(token!= null)
+            log(LoginActivity.this," token loaded from preferences!" );
+        return new JWToken(token);
     }
 }
 
