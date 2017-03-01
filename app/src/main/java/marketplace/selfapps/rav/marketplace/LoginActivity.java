@@ -39,6 +39,7 @@ import java.util.List;
 import marketplace.selfapps.rav.marketplace.authentification.AuthInterface;
 import marketplace.selfapps.rav.marketplace.authentification.model.JWToken;
 import marketplace.selfapps.rav.marketplace.authentification.model.User;
+import marketplace.selfapps.rav.marketplace.tasks.UserLoginTask;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -52,7 +53,6 @@ import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
  * A login screen that offers login via email/password.
  */
 public class LoginActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
-    private static final String BASE_URL ="ENTER_HERE_BASE_URL_ADDRESS";//TODO: !!!!!!!!!!!!!!!!!!!!!!!!ENTER_HERE_BASE_URL_ADDRESS
     private static final String ROLE ="user";
     private static final String TOKEN = "TOKEN" ;
     private AuthInterface service;
@@ -73,7 +73,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
-    private Gson gson;
+    private Gson gson = new Gson();
     private SharedPreferences sPref;
 
 
@@ -85,11 +85,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         //Check authorized user;
         startActivityIfAuthenticated(loadToken());
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        service = retrofit.create(AuthInterface.class);
+
 
 
         // Set up the login form.
@@ -212,7 +208,29 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password,ROLE);
+            mAuthTask = new UserLoginTask(email, password, ROLE) {
+                @Override
+                public void onPostExecute(JWToken token) {
+                    mAuthTask = null;
+                    showProgress(false);
+
+                    if (token != null) {
+                        log(LoginActivity.this,"onPostExecute token: "+ token.toString());
+                        saveToken(token);
+                        startActivityIfAuthenticated(token);
+
+                    } else {
+                        mPasswordView.setError(getString(R.string.error_incorrect_password));
+                        mPasswordView.requestFocus();
+                    }
+                }
+
+                @Override
+                public void onCancelled() {
+                    mAuthTask = null;
+                    showProgress(false);
+                }
+            };
             mAuthTask.execute();
         }
     }
@@ -318,60 +336,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         int IS_PRIMARY = 1;
     }
 
-    /**
-     * Represents an asynchronous login/registration task used to authenticate
-     * the user.
-     */
-    public class UserLoginTask extends AsyncTask<Void, Void, JWToken> {
-        private User user;
-        private JWToken token;
-
-
-        UserLoginTask(String email, String password, String role) {
-            user = new User(email, password, role);
-        }
-
-        @Override
-        protected JWToken doInBackground(Void... params) {
-            service.getSignIn(gson.toJson(user)).enqueue(new Callback<JWToken>() {
-                @Override
-                public void onResponse(Call<JWToken> call, Response<JWToken> response) {
-                    token = response.body();//Parsing value to JWToken.class
-
-                    log(LoginActivity.this,"token = "+ token.toString());
-
-            }
-
-                @Override
-                public void onFailure(Call<JWToken> call, Throwable t) {
-                    log(LoginActivity.this,"Call<JWToken> error: "+ t.getMessage());
-                }
-            });
-            return token;
-        }
-
-        @Override
-        protected void onPostExecute(final JWToken token) {
-            mAuthTask = null;
-            showProgress(false);
-
-            if (token != null) {
-                log(LoginActivity.this,"onPostExecute token: "+ token.toString());
-                saveToken(token);
-                startActivityIfAuthenticated(token);
-
-            } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            mAuthTask = null;
-            showProgress(false);
-        }
-    }
 
     private void startActivityIfAuthenticated(JWToken token) {
         if(token == null) return;
