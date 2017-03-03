@@ -56,6 +56,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     private static final String ROLE ="user";
     private static final String TOKEN = "TOKEN" ;
     private AuthInterface service;
+    private Gson gson = new Gson();
+    private SharedPreferences sPref;
 
     /**
      * Id to identity READ_CONTACTS permission request.
@@ -73,8 +75,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
-    private Gson gson = new Gson();
-    private SharedPreferences sPref;
+
 
 
     @Override
@@ -84,9 +85,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
 
         //Check authorized user;
         startActivityIfAuthenticated(loadToken());
-
-
-
 
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
@@ -236,12 +234,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     }
 
     private boolean isEmailValid(String email) {
-        //TODO: Replace this with your own logic
         return email.contains("@");
     }
 
     private boolean isPasswordValid(String password) {
-        //TODO: Replace this with your own logic
         return password.length() > 4;
     }
 
@@ -281,6 +277,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         }
     }
 
+    /**
+     * Async Task load data to  AutoCompleteTextView from Contacts
+     * @param i
+     * @param bundle saved instance
+     * @return Cursor object that contain same information of the entered in AutoCompleteTextView
+     */
     @Override
     public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
         return new CursorLoader(this,
@@ -298,7 +300,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
                 ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
     }
 
-
+    /**
+     * Get list of the suitable information from Loader
+     * @param cursorLoader  data from method onCreateLoader
+     * @param cursor if suitable information contained in the contacts would return cursor to first value
+     */
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
         List<String> emails = new ArrayList<>();
@@ -307,15 +313,18 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
             emails.add(cursor.getString(ProfileQuery.ADDRESS));
             cursor.moveToNext();
         }
-
         addEmailsToAutoComplete(emails);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
-
     }
 
+
+    /**
+     * Load tips to AutoCompleteTextView
+     * @param emailAddressCollection suitable information from Loader
+     */
     private void addEmailsToAutoComplete(List<String> emailAddressCollection) {
         //Create adapter to tell the AutoCompleteTextView what to show in its dropdown list.
         ArrayAdapter<String> adapter =
@@ -336,7 +345,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         int IS_PRIMARY = 1;
     }
 
-
+    /**
+     * Redirect to Base activity after authentication process
+     * @param token of the authentication will send to Activity
+     */
     private void startActivityIfAuthenticated(JWToken token) {
         if(token != null){
             Intent i = new Intent(LoginActivity.this, FeedActivity.class);
@@ -346,7 +358,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
 
     }
 
-
+    /**
+     * Save actual TOKEN in SharedPreferences
+     * @param token of the authentication will saved in  SharedPreferences
+     */
     public void saveToken(JWToken token) {
         sPref = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
@@ -355,6 +370,10 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         log(LoginActivity.this," token saved!");
     }
 
+    /**
+     * Load actual TOKEN from the SharedPreferences if contain
+     * @return token of the authentication will returned from the SharedPreferences
+     */
     public JWToken loadToken() {
         sPref = getPreferences(MODE_PRIVATE);
         String token = sPref.getString(TOKEN, null);
