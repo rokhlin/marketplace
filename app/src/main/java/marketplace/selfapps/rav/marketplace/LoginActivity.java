@@ -39,6 +39,8 @@ import java.util.List;
 import marketplace.selfapps.rav.marketplace.authentification.AuthInterface;
 import marketplace.selfapps.rav.marketplace.authentification.model.JWToken;
 import marketplace.selfapps.rav.marketplace.authentification.model.User;
+import marketplace.selfapps.rav.marketplace.interfaces.ProfileQuery;
+import marketplace.selfapps.rav.marketplace.tasks.AutoCompleteEmailLoader;
 import marketplace.selfapps.rav.marketplace.tasks.UserLoginTask;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -52,7 +54,7 @@ import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class LoginActivity extends AppCompatActivity{
     private static final String ROLE ="user";
     private static final String TOKEN = "TOKEN" ;
     private AuthInterface service;
@@ -73,6 +75,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     // UI references.
     private AutoCompleteTextView mEmailView;
     private EditText mPasswordView;
+    private TextView notAUser;
     private View mProgressView;
     private View mLoginFormView;
 
@@ -85,6 +88,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
 
         //Check authorized user;
         startActivityIfAuthenticated(loadToken());
+
+        notAUser = (TextView) findViewById(R.id.tw_not_user);
+        notAUser.setOnClickListener(new LinksListener());
 
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
@@ -119,7 +125,18 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
             return;
         }
 
-        getLoaderManager().initLoader(0, null, this);
+        getLoaderManager().initLoader(0, null, new AutoCompleteEmailLoader(this) {
+            @Override
+            public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
+                List<String> emails = new ArrayList<>();
+                cursor.moveToFirst();
+                while (!cursor.isAfterLast()) {
+                    emails.add(cursor.getString(ProfileQuery.ADDRESS));
+                    cursor.moveToNext();
+                }
+                addEmailsToAutoComplete(emails);
+            }
+        });
     }
 
     private boolean mayRequestContacts() {
@@ -277,49 +294,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         }
     }
 
-    /**
-     * Async Task load data to  AutoCompleteTextView from Contacts
-     * @param i
-     * @param bundle saved instance
-     * @return Cursor object that contain same information of the entered in AutoCompleteTextView
-     */
-    @Override
-    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        return new CursorLoader(this,
-                // Retrieve data rows for the device user's 'profile' contact.
-                Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
-                        ContactsContract.Contacts.Data.CONTENT_DIRECTORY), ProfileQuery.PROJECTION,
-
-                // Select only email addresses.
-                ContactsContract.Contacts.Data.MIMETYPE +
-                        " = ?", new String[]{ContactsContract.CommonDataKinds.Email
-                .CONTENT_ITEM_TYPE},
-
-                // Show primary email addresses first. Note that there won't be
-                // a primary email address if the user hasn't specified one.
-                ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
-    }
-
-    /**
-     * Get list of the suitable information from Loader
-     * @param cursorLoader  data from method onCreateLoader
-     * @param cursor if suitable information contained in the contacts would return cursor to first value
-     */
-    @Override
-    public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        List<String> emails = new ArrayList<>();
-        cursor.moveToFirst();
-        while (!cursor.isAfterLast()) {
-            emails.add(cursor.getString(ProfileQuery.ADDRESS));
-            cursor.moveToNext();
-        }
-        addEmailsToAutoComplete(emails);
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> cursorLoader) {
-    }
-
 
     /**
      * Load tips to AutoCompleteTextView
@@ -335,15 +309,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     }
 
 
-    private interface ProfileQuery {
-        String[] PROJECTION = {
-                ContactsContract.CommonDataKinds.Email.ADDRESS,
-                ContactsContract.CommonDataKinds.Email.IS_PRIMARY,
-        };
 
-        int ADDRESS = 0;
-        int IS_PRIMARY = 1;
-    }
 
     /**
      * Redirect to Base activity after authentication process
@@ -380,6 +346,21 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
         if(token!= null)
             log(LoginActivity.this," token loaded from preferences!" );
         return token!= null ? new JWToken(token): null;
+    }
+
+    private class LinksListener implements View.OnClickListener{
+
+        @Override
+        public void onClick(View v) {
+            switch (v.getId()){
+                case R.id.tw_not_user:
+                    startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+                    break;
+                case R.id.tw_forgot_password:
+                    //startActivity(new Intent(LoginActivity.this, RecoveryPasswordActivity.class));
+                    break;
+            }
+        }
     }
 }
 
