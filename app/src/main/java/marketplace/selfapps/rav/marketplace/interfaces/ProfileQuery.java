@@ -1,8 +1,14 @@
 package marketplace.selfapps.rav.marketplace.interfaces;
 
-/**
- * Created by user on 03.03.2017.
- */
+import android.provider.ContactsContract;
 
 public interface ProfileQuery {
+
+    String[] PROJECTION = {
+            ContactsContract.CommonDataKinds.Email.ADDRESS,
+            ContactsContract.CommonDataKinds.Email.IS_PRIMARY,
+    };
+
+    int ADDRESS = 0;
+    int IS_PRIMARY = 1;
 }
