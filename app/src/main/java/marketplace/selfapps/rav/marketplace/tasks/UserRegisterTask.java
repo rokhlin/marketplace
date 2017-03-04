@@ -18,6 +18,7 @@ import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 
 
 
+
 public abstract class UserRegisterTask extends AsyncTask<Void, Void, JWToken> {
         private static final String BASE_URL ="http://192.168.1.22:8082/";//TODO: !!!!!!!!!!!!!!!!!!!!!!!!ENTER_HERE_BASE_URL_ADDRESS
         private final AuthInterface service;
