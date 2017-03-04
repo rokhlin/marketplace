@@ -15,4 +15,8 @@ public interface AuthInterface {
     @Headers( "Content-Type: application/json" )
     @POST("signin/")
     Call<String> getSignIn(@Body User user);
+
+    @Headers( "Content-Type: application/json" )
+    @POST("register/")
+    Call<String> getRegistration(@Body User user);
 }
