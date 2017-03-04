@@ -36,6 +36,7 @@ public abstract class UserLoginTask extends AsyncTask<Void, Void, JWToken> {
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
         service = retrofit.create(AuthInterface.class);
+
     }
 
     @Override
