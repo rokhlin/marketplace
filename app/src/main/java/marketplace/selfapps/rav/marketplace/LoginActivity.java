@@ -246,7 +246,7 @@ public class LoginActivity extends AppCompatActivity{
                     showProgress(false);
                 }
             };
-            mAuthTask.execute();
+            mAuthTask.signin();
         }
     }
 

@@ -262,7 +262,7 @@ public class RegisterActivity  extends AppCompatActivity{
                     showProgress(false);
                 }
             };
-            mAuthTask.execute();
+            mAuthTask.register();
         }
     }
 
