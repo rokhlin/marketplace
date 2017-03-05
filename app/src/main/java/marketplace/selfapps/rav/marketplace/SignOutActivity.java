@@ -2,17 +2,17 @@ package marketplace.selfapps.rav.marketplace;
 
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.support.v4.os.CancellationSignal;
+import android.os.Bundle;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
 import marketplace.selfapps.rav.marketplace.authentification.model.JWToken;
 
-import static marketplace.selfapps.rav.marketplace.utils.Logs.*;
+import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 
 public class SignOutActivity extends AppCompatActivity {
     private static final String TOKEN = "TOKEN" ;
@@ -23,7 +23,7 @@ public class SignOutActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_out);
-        
+
         ad = new AlertDialog.Builder(this);
         ad.setTitle("Sign Out");  // заголовок
         ad.setMessage(""); // сообщение
@@ -72,4 +72,6 @@ public class SignOutActivity extends AppCompatActivity {
             log(SignOutActivity.this," token loaded from preferences!" );
         return token!= null ? new JWToken(token): null;
     }
+
+
 }

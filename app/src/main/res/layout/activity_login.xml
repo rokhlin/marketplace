@@ -89,7 +89,7 @@
         >
 
         <TextView
-            android:text="Not a user?"
+            android:text="@string/not_a_user"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/tw_not_user"
@@ -98,7 +98,7 @@
             android:gravity="start" />
 
         <TextView
-            android:text="Forgot password?"
+            android:text="@string/forgot_password"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/tw_forgot_password"
