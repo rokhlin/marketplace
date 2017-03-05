@@ -3,23 +3,16 @@ package marketplace.selfapps.rav.marketplace;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
-import android.app.LoaderManager;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.os.Build;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-
-import android.content.CursorLoader;
-import android.content.Loader;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.AsyncTask;
-
-import android.os.Build;
-import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
@@ -31,22 +24,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.google.gson.Gson;
-
 import java.util.ArrayList;
 import java.util.List;
 
-import marketplace.selfapps.rav.marketplace.authentification.AuthInterface;
 import marketplace.selfapps.rav.marketplace.authentification.model.JWToken;
-import marketplace.selfapps.rav.marketplace.authentification.model.User;
 import marketplace.selfapps.rav.marketplace.interfaces.ProfileQuery;
 import marketplace.selfapps.rav.marketplace.tasks.AutoCompleteEmailLoader;
 import marketplace.selfapps.rav.marketplace.tasks.UserLoginTask;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 import static android.Manifest.permission.READ_CONTACTS;
 import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
@@ -57,14 +41,13 @@ import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 public class LoginActivity extends AppCompatActivity{
     private static final String ROLE ="user";
     private static final String TOKEN = "TOKEN" ;
-    private AuthInterface service;
-    private Gson gson = new Gson();
-    private SharedPreferences sPref;
+
 
     /**
      * Id to identity READ_CONTACTS permission request.
      */
     private static final int REQUEST_READ_CONTACTS = 0;
+    private static final String PREF_NAME = "marketplace.selfapps.rav.marketplace.myPref";
 
 
     /**
@@ -75,7 +58,6 @@ public class LoginActivity extends AppCompatActivity{
     // UI references.
     private AutoCompleteTextView mEmailView;
     private EditText mPasswordView;
-    private TextView notAUser;
     private View mProgressView;
     private View mLoginFormView;
 
@@ -89,7 +71,7 @@ public class LoginActivity extends AppCompatActivity{
         //Check authorized user;
         startActivityIfAuthenticated(loadToken());
 
-        notAUser = (TextView) findViewById(R.id.tw_not_user);
+        TextView notAUser = (TextView) findViewById(R.id.tw_not_user);
         notAUser.setOnClickListener(new LinksListener());
 
         // Set up the login form.
@@ -229,7 +211,7 @@ public class LoginActivity extends AppCompatActivity{
                     mAuthTask = null;
                     showProgress(false);
 
-                    if (token != null) {
+                    if (token != null || !token.getToken().equals("null")) {
                         log(LoginActivity.this,"onPostExecute token: "+ token.toString());
                         saveToken(token);
                         startActivityIfAuthenticated(token);
@@ -316,6 +298,7 @@ public class LoginActivity extends AppCompatActivity{
      * @param token of the authentication will send to Activity
      */
     private void startActivityIfAuthenticated(JWToken token) {
+        log(LoginActivity.this," startActivityIfAuthenticated token="+token);
         if(token != null){
             Intent i = new Intent(LoginActivity.this, FeedActivity.class);
             i.putExtra(TOKEN, token);
@@ -329,7 +312,7 @@ public class LoginActivity extends AppCompatActivity{
      * @param token of the authentication will saved in  SharedPreferences
      */
     public void saveToken(JWToken token) {
-        sPref = getPreferences(MODE_PRIVATE);
+        SharedPreferences sPref = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
         ed.putString(TOKEN, token.toString());
         ed.apply();
@@ -341,11 +324,15 @@ public class LoginActivity extends AppCompatActivity{
      * @return token of the authentication will returned from the SharedPreferences
      */
     public JWToken loadToken() {
-        sPref = getPreferences(MODE_PRIVATE);
+        SharedPreferences sPref = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         String token = sPref.getString(TOKEN, null);
-        if(token!= null)
+        log(LoginActivity.this," token =" + token);
+        if(token != null){
             log(LoginActivity.this," token loaded from preferences!" );
-        return token!= null ? new JWToken(token): null;
+            return new JWToken(token);
+        }
+
+        return null;
     }
 
     private class LinksListener implements View.OnClickListener{

@@ -1,12 +1,11 @@
 package marketplace.selfapps.rav.marketplace;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 
@@ -16,6 +15,7 @@ import static marketplace.selfapps.rav.marketplace.utils.Logs.log;
 
 public class SignOutActivity extends AppCompatActivity {
     private static final String TOKEN = "TOKEN" ;
+    private static final String PREF_NAME = "marketplace.selfapps.rav.marketplace.myPref";
     private SharedPreferences sPref;
     private AlertDialog.Builder ad;
 
@@ -30,11 +30,15 @@ public class SignOutActivity extends AppCompatActivity {
         ad.setPositiveButton("Sign Out", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int arg1) {
                log(getClass(),"Sign Out button pressed");
+                saveToken(null);
+                log(getClass(),"loadToken = "+loadToken());
+                startActivity(new Intent(SignOutActivity.this, LoginActivity.class));
             }
         });
         ad.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int arg1) {
                 log(getClass(),"Cancel button pressed");
+
             }
         });
         ad.setCancelable(true);
@@ -50,15 +54,18 @@ public class SignOutActivity extends AppCompatActivity {
     }
 
     /**
-     * Save actual TOKEN in SharedPreferences
-     * @param token of the authentication will saved in  SharedPreferences
+     * Delete TOKEN in SharedPreferences
      */
-    public void saveToken(JWToken token) {
-        sPref = getPreferences(MODE_PRIVATE);
+    public void deleteToken() {
+        sPref = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         SharedPreferences.Editor ed = sPref.edit();
-        ed.putString(TOKEN, token.toString());
+        ed.putString(TOKEN,null);
+        ed.remove(TOKEN);
         ed.apply();
-        log(SignOutActivity.this," token saved!");
+        ed.commit();
+        log(SignOutActivity.this," token deleted!");
+
+
     }
 
     /**
@@ -66,12 +73,26 @@ public class SignOutActivity extends AppCompatActivity {
      * @return token of the authentication will returned from the SharedPreferences
      */
     public JWToken loadToken() {
-        sPref = getPreferences(MODE_PRIVATE);
+        sPref = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         String token = sPref.getString(TOKEN, null);
         if(token!= null)
             log(SignOutActivity.this," token loaded from preferences!" );
         return token!= null ? new JWToken(token): null;
     }
 
+    /**
+     * Save actual TOKEN in SharedPreferences
+     * @param token of the authentication will saved in  SharedPreferences
+     */
+    public void saveToken(JWToken token) {
+        sPref = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor ed = sPref.edit();
+
+        if(token == null) ed.putString(TOKEN, null);
+        else ed.putString(TOKEN, token.toString());
+        ed.apply();
+        //ed.apply();
+        log(SignOutActivity.this," token saved!");
+    }
 
 }
